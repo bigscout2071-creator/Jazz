@@ -343,13 +343,36 @@ header p {
     max-width: 200px;
 }
 
-.player-details p {
-    font-size: 0.9rem;
+.player-details .main-artist {
+    font-size: 0.95rem;
+    color: var(--accent-vibrant);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+    margin-bottom: 0.5rem;
+}
+
+.player-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.player-meta p {
+    font-size: 0.75rem;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    max-width: 250px;
+}
+
+.player-meta i {
+    width: 12px;
+    margin-right: 4px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .player-controls {

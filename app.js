@@ -15,6 +15,9 @@ const closePlayerBtn = document.getElementById('closePlayerBtn');
 const playerCover = document.getElementById('playerCover');
 const playerTitle = document.getElementById('playerTitle');
 const playerArtist = document.getElementById('playerArtist');
+const playerAlbum = document.getElementById('playerAlbum');
+const playerComposer = document.getElementById('playerComposer');
+const playerLyricist = document.getElementById('playerLyricist');
 
 let currentTrackId = null;
 let isPlaying = false;
@@ -102,6 +105,11 @@ function playTrack(track, cardElement, coverUrl) {
     playerCover.src = coverUrl;
     playerTitle.textContent = track.trackName;
     playerArtist.textContent = track.artistName;
+    playerAlbum.textContent = track.collectionName || 'Unknown Album';
+    
+    // Reset extended metadata slots while loading
+    playerComposer.textContent = '로딩중...';
+    playerLyricist.textContent = '로딩중...';
     
     // Unhide the player bar
     playerContainer.classList.remove('hidden');
@@ -118,6 +126,78 @@ function playTrack(track, cardElement, coverUrl) {
     audioElement.play();
     isPlaying = true;
     updatePlayPauseIcon();
+
+    // Async load extended metadata from MusicBrainz
+    fetchMusicBrainzInfo(track.trackName, track.artistName);
+}
+
+// Extended Metadata Fetcher
+async function fetchMusicBrainzInfo(songTitle, artistName) {
+    try {
+        // Step 1: Find the recording ID.
+        // We use an exact artist match and a fuzzy song match.
+        const searchUrl = \`https://musicbrainz.org/ws/2/recording/?query=recording:"\${encodeURIComponent(songTitle)}" AND artist:"\${encodeURIComponent(artistName)}"&fmt=json\`;
+        
+        const searchRes = await fetch(searchUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!searchRes.ok) throw new Error("MusicBrainz search failed");
+        
+        const searchData = await searchRes.json();
+        
+        if (!searchData.recordings || searchData.recordings.length === 0) {
+            playerComposer.textContent = '정보 없음';
+            playerLyricist.textContent = '정보 없음';
+            return;
+        }
+
+        const recordingId = searchData.recordings[0].id;
+
+        // Step 2: Fetch recording relations for composers & lyricists
+        // Adding a delay is sometimes needed for MusicBrainz rate limits, 
+        // but if we are just fetching directly right after, it's usually 2 hits per click.
+        const detailsUrl = \`https://musicbrainz.org/ws/2/recording/\${recordingId}?inc=work-rels&fmt=json\`;
+        const detailRes = await fetch(detailsUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!detailRes.ok) throw new Error("MusicBrainz details failed");
+        
+        const detailData = await detailRes.json();
+        
+        let composers = [];
+        let lyricists = [];
+
+        // Parse through relationships
+        if (detailData.relations) {
+            detailData.relations.forEach(rel => {
+                if (rel.work && rel.work.relations) {
+                    rel.work.relations.forEach(workRel => {
+                        if (workRel.type === 'composer' && workRel.artist) {
+                            composers.push(workRel.artist.name);
+                        }
+                        if (workRel.type === 'lyricist' && workRel.artist) {
+                            lyricists.push(workRel.artist.name);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Deduplicate arrays
+        composers = [...new Set(composers)];
+        lyricists = [...new Set(lyricists)];
+
+        // Update DOM
+        playerComposer.textContent = composers.length > 0 ? composers.join(', ') : '정보 없음';
+        playerLyricist.textContent = lyricists.length > 0 ? lyricists.join(', ') : '정보 없음';
+
+    } catch (e) {
+        console.warn("Could not fetch extended metadata: ", e);
+        playerComposer.textContent = '정보 없음 (오류)';
+        playerLyricist.textContent = '정보 없음 (오류)';
+    }
 }
 
 function togglePlay() {
