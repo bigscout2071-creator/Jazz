@@ -59,7 +59,8 @@ function displayResults(tracks) {
         if (!track.previewUrl) return;
 
         // Upgrade artwork resolution from 100x100 to 300x300 for better display
-        const highResArtwork = track.artworkUrl100.replace('100x100bb', '300x300bb'); 
+        const defaultArtwork = 'https://via.placeholder.com/300x300/1e1e24/ff007f?text=Symphony';
+        const highResArtwork = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '300x300bb') : defaultArtwork;
         
         const card = document.createElement('div');
         card.className = 'track-card';
